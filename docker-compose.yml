@@ -1,0 +1,60 @@
+version: '3.7'
+
+x-logging: &logging
+  logging:
+    driver: "json-file"
+    options:
+      tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+      max-size: "50m"
+      max-file: "5"
+      compress: "true"
+
+x-custom:
+  # Templates anchors
+  aptos_tmp: &aptos_tmp
+    <<: *logging
+    restart: always
+
+services:
+  validator:
+    <<: *aptos_tmp
+    container_name: aptos-validator
+    hostname: aptos-validator
+    image: aptoslabs/validator:testnet
+    networks:
+      shared:
+        ipv4_address:  172.16.1.10
+    volumes:
+      - ./data:/opt/aptos/data
+      - ./validator.yaml:/opt/aptos/etc/validator.yaml
+      - ./genesis.blob:/opt/aptos/genesis/genesis.blob
+      - ./waypoint.txt:/opt/aptos/genesis/waypoint.txt
+      - ./validator-identity.yaml:/opt/aptos/genesis/validator-identity.yaml
+    command: ["/opt/aptos/bin/aptos-node", "-f", "/opt/aptos/etc/validator.yaml"]
+    ports:
+      - "8080:8080"
+      - "9101:9101"
+      - "6180:6180"
+
+  faucet:
+    <<: *aptos_tmp
+    container_name: aptos-faucet
+    hostname: aptos-faucet
+    image: aptoslabs/faucet:testnet
+    depends_on:
+      - validator
+    networks:
+      shared:
+        ipv4_address:  172.16.1.11
+    volumes:
+      - ./mint.key:/opt/aptos/var/mint.key
+    command: /opt/aptos/bin/aptos-faucet --address 0.0.0.0 --mint-key ${FAUCET_PRIVATE_KEY} --port 8000 --chain-id 4 --server-url http://172.16.1.10:8080
+    ports:
+      - "8000:8000"
+
+networks:
+  shared:
+    name: "aptos-docker-compose-shared"
+    ipam:
+      config:
+        - subnet: 172.16.1.0/24
