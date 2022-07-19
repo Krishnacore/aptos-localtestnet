@@ -20,7 +20,7 @@ services:
     <<: *aptos_tmp
     container_name: aptos-validator
     hostname: aptos-validator
-    image: aptoslabs/validator:testnet
+    image: "${VALIDATOR_IMAGE:-aptoslabs/validator}:${IMAGE_TAG:-testnet}"
     networks:
       shared:
         ipv4_address:  172.16.1.10
@@ -40,7 +40,7 @@ services:
     <<: *aptos_tmp
     container_name: aptos-faucet
     hostname: aptos-faucet
-    image: aptoslabs/faucet:testnet
+    image: "${FAUCET_IMAGE:-aptoslabs/faucet}:${IMAGE_TAG:-testnet}"
     depends_on:
       - validator
     networks:
